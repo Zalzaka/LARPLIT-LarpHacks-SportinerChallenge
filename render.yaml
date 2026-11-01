@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: larplete
+    runtime: static
+    branch: main
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /config.local.js
+        destination: /config.example.js

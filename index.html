@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LARPLIT</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-in">
+      <button class="brand" onclick="goBrand()"><span class="logo"><img src="logo-l.png" alt=""></span><span>LARPLIT</span></button>
+      <div id="header-right"></div>
+    </div>
+    <nav id="tabs" class="tabs hidden"></nav>
+  </header>
+
+  <main id="app" class="wrap"></main>
+
+  <footer class="foot">Fictional coaches and demo data. Not a real booking service.</footer>
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- config.local.js is git-ignored. Copy config.example.js to create it. -->
+  <script src="config.local.js"></script>
+  <script src="faces.js"></script>
+  <script src="data.js"></script>
+  <script src="state.js"></script>
+  <script src="ai.js"></script>
+  <script src="app.js"></script>
+  <script src="coach.js"></script>
+  <script src="utr-events.js"></script>
+  <script src="comps.js"></script>
+  <script src="calendar.js"></script>
+  <script src="extras.js"></script>
+  <script src="demo.js"></script>
+</body>
+</html>
