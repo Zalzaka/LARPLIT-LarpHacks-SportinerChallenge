@@ -232,11 +232,12 @@ const LANG_ICONS = { English: '🇨🇦', French: '🇫🇷', Spanish: '🇪🇸
 // Each entry is one screen. options() returns [value, icon, label, description?]. type 'text' is a typed answer.
 const WIZARD = [
   { key: 'sport', short: 'Sport', title: 'What do you want to play?', sub: 'You can change this later in Settings.', options: () => [['tennis', '🎾', 'Tennis'], ['pickleball', '🏓', 'Pickleball']] },
-  { key: 'level', short: 'Your level', title: "What's your level today?", layout: 'list', options: () => LEVELS.map((l) => [l.v, levelIcon(l.v), levelName(l.v), l.desc]) },
+  { key: 'level', short: 'Your level', title: "What's your current level?", layout: 'list', options: () => LEVELS.map((l) => [l.v, levelIcon(l.v), levelName(l.v), l.desc]) },
   {
     key: 'target', short: 'Target level', title: 'Which level do you want to reach?', layout: 'list',
     options: () => {
       const current = stu().level ?? 1;
+      if (current >= 5) return [[5, '💪', 'I want to continue developing my skills', 'Keep sharpening your game at the top level.']];
       const higher = LEVELS.filter((l) => l.v > current);
       return (higher.length ? higher : [LEVELS[LEVELS.length - 1]]).map((l) => [l.v, levelIcon(l.v), levelName(l.v), l.desc]);
     },
@@ -378,6 +379,7 @@ function kmAway(c) {
 }
 
 const MIN_COACHES = 5;
+const FEATURED_COACHES = ['t6', 't8']; // Marc Tremblay, Carlos Mendez
 let exactMatchCount = 0;
 
 // Coaches that fit every filter come first. If fewer than MIN_COACHES fit, the board is topped up with the closest
@@ -388,8 +390,13 @@ function filteredCoaches() {
   const ranked = allCoaches().map((c) => ({ c, m: misses(c) })).sort((a, b) => a.m - b.m || (b.c.rating || 0) - (a.c.rating || 0));
   const exact = ranked.filter((x) => x.m === 0).map((x) => x.c).sort((a, b) => Number(isStrongMatch(b)) - Number(isStrongMatch(a)));
   exactMatchCount = exact.length;
-  if (exact.length >= MIN_COACHES) return exact;
-  return [...exact, ...ranked.filter((x) => x.m > 0).slice(0, MIN_COACHES - exact.length).map((x) => x.c)];
+  const list = exact.length >= MIN_COACHES ? exact : [...exact, ...ranked.filter((x) => x.m > 0).slice(0, MIN_COACHES - exact.length).map((x) => x.c)];
+  // Marc Tremblay or Carlos Mendez is always on the board, whatever the filters: add the nearer one if neither is there.
+  if (!list.some((c) => FEATURED_COACHES.includes(c.id))) {
+    const featured = ranked.filter((x) => FEATURED_COACHES.includes(x.c.id)).sort((a, b) => kmAway(a.c) - kmAway(b.c))[0];
+    if (featured) list.splice(Math.min(2, list.length), 0, featured.c);
+  }
+  return list;
 }
 
 function orbitView() {
@@ -597,7 +604,7 @@ function payRequestHtml(m, viewer, coachId) {
 }
 
 function messagesHtml(thread, viewer) {
-  return `<div class="msgs">${thread.messages.map((m) => `<div class="msg ${m.from === viewer ? 'me' : 'them'}">${m.auto ? `<span class="auto">${m.auto === 'payment' ? '💳 Payment' : '🏆 Competition update'}</span>` : ''}${esc(m.text)}${m.payRequest ? payRequestHtml(m, viewer, thread.coachId) : ''}</div>`).join('')}</div>`;
+  return `<div class="msgs">${thread.messages.filter((m) => !m.payRequest).map((m) => `<div class="msg ${m.from === viewer ? 'me' : 'them'}">${m.auto ? `<span class="auto">${m.auto === 'payment' ? '💳 Payment' : '🏆 Competition update'}</span>` : ''}${esc(m.text)}${m.payRequest ? payRequestHtml(m, viewer, thread.coachId) : ''}</div>`).join('')}</div>`;
 }
 
 function threadView(coachId) {
@@ -653,7 +660,6 @@ async function triggerCoachReply(coachId, isFirst, lastText) {
     addInbox(email, { kind: 'note', from: coach.name, title: 'Welcome', body: `Thanks for reaching out. ${coach.persona}` });
     addInbox(email, { kind: 'drill', from: coach.name, title: DRILLS[skill].title, body: DRILLS[skill].text, due: Date.now() + 7 * DAY, done: false });
     if (session === email) toast('New drill in your Calendar');
-    thread.messages.push({ from: 'coach', text: `Ok, you can pay me here to lock in our first session ($${coach.pricePerHour}).`, ts: Date.now() + 1, payRequest: { amount: coach.pricePerHour, desc: 'First session' } });
   }
   saveState();
   render();
@@ -830,7 +836,7 @@ function saveSettings() {
       next[st.key] = JSON.parse(el.value);
     }
   }
-  if (next.target <= next.level) return toast('Your target level must be above your current level.');
+  if (next.target <= next.level && next.level < 5) return toast('Your target level must be above your current level.');
   Object.assign(stu(), next);
   saveState();
   toast('Preferences saved');
